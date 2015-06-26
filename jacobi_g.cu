@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 /**
  * File: parallel implementation of jacobi method
  * Program summary:
@@ -13,6 +14,17 @@
  * 
  *	matrix V is also calculated along the way
  */
+=======
+/*
+real	0m1.637s
+user	0m1.142s
+sys		0m0.463s 
+
+real	0m1.528s
+user	0m0.931s
+sys		0m0.561s
+*/
+>>>>>>> a2c9a02f5f6faa572ad9c322fd3779207cb2faec
 
 #include <stdio.h>
 #include <math.h>
@@ -23,8 +35,12 @@ __global__ void check(double *dev_A, int n, double tolerance, int *d_cont/*, int
 
 int main ( int argc, char *argv[] )
 {
+<<<<<<< HEAD
 	/* may use input from file, not used in this version */
 	if ( argc != 2 ) /* argc should be 2 for correct execution */
+=======
+	if ( argc != 1 ) /* argc should be 1 for correct execution */
+>>>>>>> a2c9a02f5f6faa572ad9c322fd3779207cb2faec
     {
         printf( "usage: %s filename", argv[0] );
 		exit(1);
@@ -53,7 +69,10 @@ int main ( int argc, char *argv[] )
 	//cudaMalloc( (void**) &d_indicator, 1024*1024*sizeof(int));
 
 	/* enter a valid matrix A*/
+<<<<<<< HEAD
 	/* A is generated randomly */
+=======
+>>>>>>> a2c9a02f5f6faa572ad9c322fd3779207cb2faec
 	int row, col, i;
 	for (row=0; row<n; row++)
 	{
@@ -72,7 +91,11 @@ int main ( int argc, char *argv[] )
 			for ( col=0; col<(n-row); col++)
 				*(A+row*n+col) = *(A+col*n+row);
 	}
+<<<<<<< HEAD
 
+=======
+	printf("scan finished\n");
+>>>>>>> a2c9a02f5f6faa572ad9c322fd3779207cb2faec
 
 	/*copy matrix to device*/
 	cudaMemcpy(d_A, A, 1024*1024*sizeof(double), cudaMemcpyHostToDevice);
@@ -115,12 +138,19 @@ int main ( int argc, char *argv[] )
 	dim3 block (n/2, 1, 1);
 
 	int iteration = 0;
+<<<<<<< HEAD
 	while ((cont != 0) && (iteration <= 100000)) //max iteration
+=======
+	while ((cont != 0) && (iteration <= 100000))
+>>>>>>> a2c9a02f5f6faa572ad9c322fd3779207cb2faec
 	{
 		jacobi<<<grid, block>>>(d_A, d_V, d_pair, n);
 		cont = 0;
 		cudaMemcpy(d_cont, &cont, sizeof(int), cudaMemcpyHostToDevice);
+<<<<<<< HEAD
 		/* launch kernel */
+=======
+>>>>>>> a2c9a02f5f6faa572ad9c322fd3779207cb2faec
 		check<<<16, dim3(n/16, 1, 1)>>>(d_A, n, tolerance, d_cont/*,d_indicator*/);
 		cudaMemcpy(&cont, d_cont, sizeof(int), cudaMemcpyDeviceToHost);
 		/*cudaMemcpy(indicator, d_indicator, 1024*1024*sizeof(int), cudaMemcpyDeviceToHost);
@@ -179,8 +209,11 @@ int main ( int argc, char *argv[] )
 
 }
 
+<<<<<<< HEAD
 
 /* Kernel that performs transformation */
+=======
+>>>>>>> a2c9a02f5f6faa572ad9c322fd3779207cb2faec
 __global__ void jacobi(double *dev_A, double *dev_V, int *dev_pair, int size)
 {
 	short threadno, p, q, n, i, temp1, temp2;
@@ -271,7 +304,10 @@ __global__ void jacobi(double *dev_A, double *dev_V, int *dev_pair, int size)
 	
 }
 
+<<<<<<< HEAD
 /* Kernel that checks if need to continue */
+=======
+>>>>>>> a2c9a02f5f6faa572ad9c322fd3779207cb2faec
 __global__ void check (double *dev_A, int n, double tolerance, int *d_cont/*, int *d_indicator*/)
 {
 	int threadno = blockIdx.x * n/16 + threadIdx.x;
@@ -288,6 +324,25 @@ __global__ void check (double *dev_A, int n, double tolerance, int *d_cont/*, in
 				//*(d_indicator + threadno * n + i) = 0;
 		} 
 	}
+<<<<<<< HEAD
+=======
+
+	/*for (int i = 0; i < n; i++)
+	{	
+		if (threadIdx.x != i)
+		{
+			if (*(dev_A + threadIdx.x * n + i) > tolerance)
+			{
+				*(d_indicator + threadIdx.x * n + i) = 1;
+				*d_cont = 1;
+			}
+			else
+				*(d_indicator + threadIdx.x * n + i) = 0;
+		} 
+		else
+			*(d_indicator + threadIdx.x * n + i) = 1;
+	}*/
+>>>>>>> a2c9a02f5f6faa572ad9c322fd3779207cb2faec
 }
 
 
@@ -296,3 +351,7 @@ __global__ void check (double *dev_A, int n, double tolerance, int *d_cont/*, in
 
 
 		
+<<<<<<< HEAD
+=======
+
+>>>>>>> a2c9a02f5f6faa572ad9c322fd3779207cb2faec

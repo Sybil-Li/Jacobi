@@ -209,4 +209,8 @@ int* CT (int* pair, int n)
 	*(pair + n - 1) = row1end;
 
 	return pair;
+<<<<<<< HEAD
 }
+=======
+}
+>>>>>>> a2c9a02f5f6faa572ad9c322fd3779207cb2faec

@@ -1,53 +1,48 @@
-<<<<<<< HEAD
-/**
- * File: parallel jacobi to be used in tester
- * 		takes a matrix pointer from the tester
- */
-=======
-/*
-real	0m1.637s
-user	0m1.142s
-sys		0m0.463s 
-
-real	0m1.528s
-user	0m0.931s
-sys		0m0.561s
-*/
->>>>>>> a2c9a02f5f6faa572ad9c322fd3779207cb2faec
-
-#include "jacobi_f.h"
 #include <stdio.h>
 #include <math.h>
 #include <stdlib.h>
+#include <thrust/host_vector.h>
+#include <thrust/device_vector.h>
+#include <iostream>
 
 
-__global__ void check (double *dev_A, int n, double tolerance, int *d_cont/*, int *d_indicator*/);
-__global__ void jacobi(double *dev_A, double *dev_V, int *dev_pair, int size);
+__global__ void jacobi(double *dev_A, double *dev_V, int *dev_pair, int size, int *d_cont, int tolerance);
+void check (double *A, int n, double tolerance, thrust::host_vector<int> H);
 
-void jacobi_cu( double* M, int n)
+
+int main (void)
 {
 
-	int row, col, i;	
 	double tolerance = 0.000000000001;
-	int *d_cont, cont = 1;
+	int n = 32, cont = 1;
+
+	thrust::host_vector<int> H(n*n);
+	for (int i = 0; i < n*n; i++)
+		H[i] = 0;
+	thrust::device_vector<int> D = H;
+
+	int *d_cont;
 	cudaMalloc((void**) &d_cont, sizeof(int));
 	cudaMemcpy(d_cont, &cont, sizeof(int), cudaMemcpyHostToDevice);
 
-	double* A = M;
-
+	double* A = (double*)malloc(1024*1024*sizeof(double));
 	double* V = (double*)malloc(1024*1024*sizeof(double));
 	int* pair = (int*)malloc(n*sizeof(int));
 
-	double *d_A;
-	double *d_V;
+	double *d_A, *d_V;
 	int *d_pair;
-	//int *d_indicator;
 	cudaMalloc( (void**) &d_A, 1024*1024*sizeof(double));
 	cudaMalloc( (void**) &d_V, 1024*1024*sizeof(double));
 	cudaMalloc( (void**) &d_pair, n*sizeof(int));
-	//cudaMalloc( (void**) &d_indicator, 1024*1024*sizeof(int));
 
-	
+	/* enter a valid matrix A*/
+	int row, col, i;
+	for (row=0; row<n; row++)
+	{
+		for (col=0; col<n-1; col++)
+			scanf("%lf,", (A+row*n+col));
+		scanf("%lf\n", (A+row*n+n-1));
+	}
 
 	/*copy matrix to device*/
 	cudaMemcpy(d_A, A, 1024*1024*sizeof(double), cudaMemcpyHostToDevice);
@@ -60,19 +55,16 @@ void jacobi_cu( double* M, int n)
 			if (row == col)
 			{
 				*(V + row * n + col) = 1.0;
-				//*(indicator + row * n) = 0;
 			}
 			else
 			{
 				*(V + row * n + col) = 0.0;
-				//*(indicator + row * n) = 0;
 			}
 		}
 	}
 
 	/*copy matrix to device*/
-	//cudaMemcpy(d_V, V, 1024*1024*sizeof(double), cudaMemcpyHostToDevice);
-	//cudaMemcpy(d_indicator, indicator, 1024*1024*sizeof(int), cudaMemcpyHostToDevice);
+	cudaMemcpy(d_V, V, 1024*1024*sizeof(double), cudaMemcpyHostToDevice);
 
 
 	/*initializing pair matrix*/
@@ -89,22 +81,15 @@ void jacobi_cu( double* M, int n)
 	dim3 grid (1, 1, 1);
 	dim3 block (n/2, 1, 1);
 
-	int iteration = 0;
-	while ((cont != 0) && (iteration <= 100000))
+	while (cont != 0)
 	{
-		jacobi<<<grid, block>>>(d_A, d_V, d_pair, n);
-		cont = 0;
-		cudaMemcpy(d_cont, &cont, sizeof(int), cudaMemcpyHostToDevice);
-		check<<<16, dim3(n/16, 1, 1)>>>(d_A, n, tolerance, d_cont/*,d_indicator*/);
-		cudaMemcpy(&cont, d_cont, sizeof(int), cudaMemcpyDeviceToHost);
-		/*cudaMemcpy(indicator, d_indicator, 1024*1024*sizeof(int), cudaMemcpyDeviceToHost);
-		for (row = 0; row<n; row++) {
-			for (col = 0; col<n; col++)
-				printf("%d ", *(indicator+row*n+col));
-			printf("\n");
-		}*/
-
-		iteration++;
+		jacobi<<<grid, block>>>(d_A, d_V, d_pair, n, d_cont, tolerance);
+		cudaMemcpy(A, d_A, 1024*1024*sizeof(double), cudaMemcpyDeviceToHost);
+		check(A, n, tolerance, H);
+		for(int i = 0; i < H.size(); i++)
+        	std::cout << "H[" << i << "] = " << H[i] << std::endl;
+		cont =  thrust::reduce(H.begin(), H.end(), (int) 0, thrust::plus<int>());
+		printf("%d\n", cont);
 		
 	}
 	
@@ -114,33 +99,27 @@ void jacobi_cu( double* M, int n)
 
 	/*write matrix back to host*/
 	cudaMemcpy(A, d_A, 1024*1024*sizeof(double), cudaMemcpyDeviceToHost);
-	//cudaMemcpy(V, d_V, 1024*1024*sizeof(double), cudaMemcpyDeviceToHost);
-	//cudaMemcpy(indicator, d_indicator, 1024*1024*sizeof(int), cudaMemcpyDeviceToHost);
-	/*for (row = 0; row<n; row++) {
-		for (col = 0; col<n; col++)
-			printf("%d ", *(indicator+row*n+col));
-		printf("\n");
-	}*/
+	cudaMemcpy(V, d_V, 1024*1024*sizeof(double), cudaMemcpyDeviceToHost);
 
 	/*check result*/
 	double* ans = (double*) malloc(n*sizeof(double));
-	//double norm = 0;
+	double norm = 0;
 
 	for (row = 0; row<n; row++){
 		for (col = 0; col<n; col++){
 			if (row==col)
 			{
-				//*(ans+row) = *(A+row*n+col);
-				//norm += (*(ans+row))*(*(ans+col));
-				printf("%lf\n", *(A+row*n+col));
+				*(ans+row) = *(A+row*n+col);
+				norm += (*(ans+row))*(*(ans+col));
+				//printf("%lf ", *(A+row*n+col));
 			}
 			
 			//printf("%lf", *(A+row*n+col));
 		}
 		//printf("\n");
 	}
-	//norm = sqrt(norm);
-	//printf("Norm is %lf\n", norm);
+	norm = sqrt(norm);
+	printf("Norm is %lf\n", norm);
 
 	free(A);
 	free(V);
@@ -148,10 +127,9 @@ void jacobi_cu( double* M, int n)
 	cudaFree(d_A);
 	cudaFree(d_V);
 	cudaFree(d_pair);
-
 }
 
-__global__ void jacobi(double *dev_A, double *dev_V, int *dev_pair, int size)
+__global__ void jacobi(double *dev_A, double *dev_V, int *dev_pair, int size, int *d_cont, int tolerance)
 {
 	short threadno, p, q, n, i, temp1, temp2;
 	double c, s;
@@ -203,14 +181,14 @@ __global__ void jacobi(double *dev_A, double *dev_V, int *dev_pair, int size)
 	 
 
 	/* V = V*J */
-	/*for (i = 0; i < n; i++)
+	for (i = 0; i < n; i++)
 	{ 
 		double Vpi = (*(dev_V + p * n + i))*c + (*(dev_V + q * n + i))*(-s);
 		double Vqi = (*(dev_V + p * n + i))*s + (*(dev_V + q * n + i))*c;
 		__syncthreads();
 		*(dev_V + p * n + i) = Vpi;
 		*(dev_V + q * n + i) = Vqi;
-	}*/
+	}
 
 	/* chess tournament rotate*/
 	if (threadno == 0)	
@@ -241,22 +219,23 @@ __global__ void jacobi(double *dev_A, double *dev_V, int *dev_pair, int size)
 	
 }
 
-__global__ void check (double *dev_A, int n, double tolerance, int *d_cont/*, int *d_indicator*/)
+void check (double *A, int n, double tolerance, thrust::host_vector<int> H)
 {
-	int threadno = blockIdx.x * n/16 + threadIdx.x;
-	for (int i = 0; i < n; i++)
-	{	
-		if (threadno != i)
+	int i, j;
+	for ( i = 0; i< n; i++)
+	{
+		for ( j = 0; j< n; j++)
 		{
-			if (*(dev_A + threadno * n + i) > tolerance)
-			{
-				//*(d_indicator + threadno * n + i) = 1;
-				*d_cont = 1;
-			}
-			//else
-				//*(d_indicator + threadno * n + i) = 0;
-		} 
+			if (i != j)
+				if (*(A +i* n + j) > tolerance)	
+					H[i* n + j] = 1;
+				else
+					H[i* n + j] = 0;
+			else
+				H[i * n + j] = 0;
+		}
 	}
+
 }
 
 
@@ -265,7 +244,4 @@ __global__ void check (double *dev_A, int n, double tolerance, int *d_cont/*, in
 
 
 		
-<<<<<<< HEAD
-=======
 
->>>>>>> a2c9a02f5f6faa572ad9c322fd3779207cb2faec

@@ -1,5 +1,8 @@
+<<<<<<< HEAD
 /* compile with nvcc -arch=sm_35 -o tester jacobi_f.o jacobi_cpu.o */
 
+=======
+>>>>>>> a2c9a02f5f6faa572ad9c322fd3779207cb2faec
 #include <stdio.h>
 #include <math.h>
 #include <stdlib.h>
@@ -30,7 +33,10 @@ int main(int argc, char *argv[])
 
 	printf("For matrix size %d*%d\n", size, size);
 
+<<<<<<< HEAD
 	/* recoding time for serial version*/
+=======
+>>>>>>> a2c9a02f5f6faa572ad9c322fd3779207cb2faec
 	clock_t start = clock(), diff;
 	jacobi_c(M,size);
 	diff = clock() - start;
@@ -38,7 +44,10 @@ int main(int argc, char *argv[])
 	double t_in_sec = (double)diff/(double)CLOCKS_PER_SEC;
 	printf("Time taken for CPU jacobi: %f seconds.\n", t_in_sec);
 	
+<<<<<<< HEAD
 	/* recording time for parallel version */
+=======
+>>>>>>> a2c9a02f5f6faa572ad9c322fd3779207cb2faec
 	start = clock();
 	jacobi_cu(M,size);
 	diff = clock() - start;
@@ -47,4 +56,8 @@ int main(int argc, char *argv[])
 	printf("Time taken for GPU jacobi: %f seconds.\n", t_in_sec);
 
 	return 0;
+<<<<<<< HEAD
 }
+=======
+}
+>>>>>>> a2c9a02f5f6faa572ad9c322fd3779207cb2faec
